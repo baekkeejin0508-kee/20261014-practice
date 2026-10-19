@@ -10,6 +10,7 @@ __pycache__/
 # Streamlit secrets & DB
 .streamlit/secrets.toml
 *.db
+*.db-*
 
 # HWP documents (OpenAI does not support HWP parsing)
 *.hwp

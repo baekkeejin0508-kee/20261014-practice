@@ -162,12 +162,14 @@ with st.sidebar:
         data=json_data,
         file_name=download_filename,
         mime="application/json",
+        key="sidebar_download_btn",
         use_container_width=True,
-        disabled=not has_messages,
         help="입력 문장, 모델, 지침 해시 및 대화 기록이 포함된 JSON 파일을 내려받습니다."
     )
-    if not has_messages:
-        st.caption("대화 입력 후 활성화됩니다.")
+    if has_messages:
+        st.caption(f"✅ 대화 {len(messages_list)}건 기록됨 (저장 가능)")
+    else:
+        st.caption("💡 대화 입력 전에도 빈 템플릿으로 저장 가능합니다.")
 
     st.markdown("---")
     
@@ -235,6 +237,23 @@ for message in st.session_state.messages:
             st.caption(message["rag_badge"])
         st.markdown(message["content"])
 
+# 대화 내용이 있으면 메인 화면 하단에도 즉시 다운로드 버튼 제공
+if st.session_state.messages:
+    st.markdown("---")
+    col_dl1, col_dl2 = st.columns([3, 2])
+    with col_dl1:
+        st.success(f"💾 **{download_filename}** 다운로드 준비 완료 (대화 {len(st.session_state.messages)}건)")
+    with col_dl2:
+        st.download_button(
+            label=f"📥 {download_filename} 바로 저장",
+            data=json_data,
+            file_name=download_filename,
+            mime="application/json",
+            key="main_download_btn",
+            use_container_width=True,
+            help="현재 대화 내용을 포함한 JSON 파일을 즉시 내려받습니다."
+        )
+
 # ---------------------------------------------------------
 # 7. 사용자 입력 및 실행
 # ---------------------------------------------------------
@@ -277,3 +296,4 @@ if user_input:
     st.session_state.messages.append(
         {"role": "assistant", "content": response, "rag_badge": badge_text}
     )
+    st.rerun()
