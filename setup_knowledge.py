@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from pathlib import Path
 from openai import OpenAI
 
@@ -10,10 +11,10 @@ sys.stdout.reconfigure(encoding="utf-8")
 # setup_knowledge.py
 #
 # 역할
-# 1. knowledge/ 폴더 내 모든 PDF 교과서 및 지침 파일을 찾는다.
+# 1. knowledge/ 폴더 내 보건교과 PDF 파일들을 찾는다.
 # 2. OpenAI Vector Store('Health Inquiry Knowledge')를 생성한다.
-# 3. PDF 파일들을 업로드하고 인덱싱(청킹 + 임베딩) 완료까지 대기한다.
-# 4. 생성된 VECTOR_STORE_ID를 .streamlit/secrets.toml 에 자동 저장한다.
+# 3. PDF 파일들을 파일별로 안전하게 업로드하고 Vector Store에 등록한다.
+# 4. 발급된 VECTOR_STORE_ID를 .streamlit/secrets.toml 에 자동 저장한다.
 # ---------------------------------------------------------
 
 KNOWLEDGE_DIR = Path("knowledge")
@@ -32,7 +33,7 @@ def load_api_key_from_secrets():
                 line = line.strip()
                 if line.startswith("OPENAI_API_KEY") and "=" in line:
                     key = line.split("=", 1)[1].strip().strip('"').strip("'")
-                    if key and not key.startswith("sk-여기에"):
+                    if key and not key.startswith("여기에_"):
                         os.environ["OPENAI_API_KEY"] = key
                         return key
     return None
@@ -68,14 +69,13 @@ def main():
     api_key = load_api_key_from_secrets()
     if not api_key:
         print("⚠️ OPENAI_API_KEY 가 설정되어 있지 않습니다.")
-        print("방법 1) .streamlit/secrets.toml 파일에 OPENAI_API_KEY = \"sk-...\" 입력")
-        print("방법 2) 터미널에서 환경변수 설정: export OPENAI_API_KEY=\"sk-...\"")
+        print(".streamlit/secrets.toml 파일에 OPENAI_API_KEY = \"sk-...\" 를 입력해 주세요.")
         return
 
     client = OpenAI(api_key=api_key)
 
     # -----------------------------------------------------
-    # Step 1. Knowledge 폴더의 모든 PDF 파일 탐색 (대소문자 구분 없음)
+    # Step 1. Knowledge 폴더의 모든 PDF 파일 탐색
     # -----------------------------------------------------
     if not KNOWLEDGE_DIR.exists():
         raise FileNotFoundError("knowledge/ 폴더가 존재하지 않습니다.")
@@ -92,13 +92,13 @@ def main():
         )
 
     total_size_mb = sum(p.stat().st_size for p in pdf_paths) / (1024 * 1024)
-    print("==========================================================")
-    print(f"📚 업로드할 보건교과 Knowledge PDF 목록 (총 {len(pdf_paths)}개 / {total_size_mb:.1f} MB)")
-    print("==========================================================")
+    print("==================================================================")
+    print(f"📚 업로드할 보건교과 Knowledge PDF (총 {len(pdf_paths)}개 / {total_size_mb:.1f} MB)")
+    print("==================================================================")
     for i, path in enumerate(pdf_paths, 1):
         mb = path.stat().st_size / (1024 * 1024)
-        print(f"{i:2d}. {path.name} ({mb:.1f} MB)")
-    print("==========================================================\n")
+        print(f" {i:2d}. {path.name} ({mb:.1f} MB)")
+    print("==================================================================\n")
 
     # -----------------------------------------------------
     # Step 2. Vector Store 생성
@@ -110,43 +110,43 @@ def main():
     print(f"   ✓ Vector Store 생성 완료: {vector_store.id}\n")
 
     # -----------------------------------------------------
-    # Step 3. PDF 업로드 + 인덱싱 완료까지 대기 (Batch Upload)
+    # Step 3. 파일별 순차 업로드 및 Vector Store 등록
     # -----------------------------------------------------
-    print("2) PDF 파일 업로드 및 인덱싱(청킹 + 임베딩) 시작...")
-    print("   (용량에 따라 수 분 정도 소요될 수 있으니 완료될 때까지 기다려 주세요)")
+    print("2) PDF 파일 업로드 및 인덱싱 등록 시작...")
+    success_count = 0
+    file_ids = []
 
-    streams = []
-    try:
-        streams = [open(path, "rb") for path in pdf_paths]
-        batch = client.vector_stores.file_batches.upload_and_poll(
-            vector_store_id=vector_store.id,
-            files=streams,
-        )
-    finally:
-        for s in streams:
-            try:
-                s.close()
-            except Exception:
-                pass
+    for i, path in enumerate(pdf_paths, 1):
+        mb = path.stat().st_size / (1024 * 1024)
+        print(f"   [{i:2d}/{len(pdf_paths)}] {path.name} ({mb:.1f} MB) 전송 중...", end=" ", flush=True)
+        try:
+            with open(path, "rb") as f:
+                f_obj = client.files.create(file=f, purpose="assistants")
+            client.vector_stores.files.create(
+                vector_store_id=vector_store.id,
+                file_id=f_obj.id
+            )
+            file_ids.append(f_obj.id)
+            success_count += 1
+            print("✓ 완료!")
+        except Exception as e:
+            print(f"❌ 실패 ({e})")
+
+    print(f"\n3) 총 {success_count}/{len(pdf_paths)}개 파일 업로드 및 인덱싱 요청 완료!")
 
     # -----------------------------------------------------
-    # Step 4. 결과 확인 및 secrets.toml 자동 저장
+    # Step 4. secrets.toml 자동 저장
     # -----------------------------------------------------
-    print("\n3) Knowledge 인덱싱 결과 확인")
-    print(f"   • 최종 상태(status): {batch.status}")
-    if hasattr(batch, "file_counts"):
-        print(f"   • 처리 파일 현황(file_counts): {batch.file_counts}")
-
-    print("\n----------------------------------------------------------")
+    print("\n------------------------------------------------------------------")
     print(f"발급된 VECTOR_STORE_ID: {vector_store.id}")
-    print("----------------------------------------------------------")
+    print("------------------------------------------------------------------")
 
     save_vector_store_id_to_secrets(vector_store.id)
 
     print(
         "\n✅ 이제 보건교과 RAG 준비가 완료되었습니다!\n"
         "Streamlit 앱 실행:\n"
-        "streamlit run app.py\n"
+        "python -m streamlit run app.py\n"
     )
 
 
