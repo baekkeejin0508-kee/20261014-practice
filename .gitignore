@@ -1,5 +1,3 @@
-# .gitignore 내용 
-
 # Virtual environment
 .venv/
 venv/
@@ -9,11 +7,16 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Streamlit secrets
+# Streamlit secrets & DB
 .streamlit/secrets.toml
-
-# Local database
 *.db
+
+# HWP documents (OpenAI does not support HWP parsing)
+*.hwp
+
+# Large PDF textbooks for RAG (kept locally in knowledge/, excluded from Git push to avoid 100MB limit)
+knowledge/*.pdf
+!knowledge/README.md
 
 # OS
 .DS_Store
