@@ -1,4 +1,7 @@
 import os
+import json
+import hashlib
+from datetime import datetime, timezone
 import streamlit as st
 from agents import Agent, FileSearchTool, Runner, SQLiteSession
 
@@ -105,6 +108,43 @@ with st.sidebar:
         if "agent_session" in st.session_state:
             del st.session_state["agent_session"]
         st.rerun()
+
+    st.markdown("---")
+
+    # 💾 테스트 기록 보관 (JSON 다운로드)
+    st.subheader("💾 테스트 기록 다운로드")
+    test_id = st.selectbox("테스트 항목 선택", ["T1", "T2", "T3", "T4", "T5"], index=0)
+    current_mode = "ON" if is_rag_on else "OFF"
+    download_filename = f"HealthCoach_W6-{test_id}_{current_mode}.json"
+
+    # 지침 해시 (SHA-256 앞 12자리)
+    instructions_hash = hashlib.sha256(HEALTH_INSTRUCTIONS.strip().encode("utf-8")).hexdigest()[:12]
+
+    record_payload = {
+        "notice": "특성화고 2학년 보건간호 RAG 지식 에이전트 테스트 기록",
+        "test_id": test_id,
+        "mode": f"RAG_{current_mode}",
+        "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+        "instructions_hash": instructions_hash,
+        "vector_store_id": vector_store_id if is_rag_on else None,
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "messages": st.session_state.messages,
+    }
+
+    json_data = json.dumps(record_payload, ensure_ascii=False, indent=2)
+
+    has_messages = len(st.session_state.messages) > 0
+    st.download_button(
+        label=f"📥 {download_filename} 저장",
+        data=json_data,
+        file_name=download_filename,
+        mime="application/json",
+        use_container_width=True,
+        disabled=not has_messages,
+        help="입력 문장, 모델, 지침 해시 및 대화 기록이 포함된 JSON 파일을 내려받습니다."
+    )
+    if not has_messages:
+        st.caption("대화 입력 후 활성화됩니다.")
 
     st.markdown("---")
     
