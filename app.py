@@ -1,9 +1,18 @@
 import os
+import sys
 import json
 import hashlib
+import asyncio
 from datetime import datetime, timezone
 import streamlit as st
 from agents import Agent, FileSearchTool, Runner, SQLiteSession
+
+# Windows 환경에서 Streamlit 및 asyncio 이벤트 루프 충돌 방지
+if sys.platform == "win32":
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception:
+        pass
 
 # ---------------------------------------------------------
 # 1. 기본 설정 및 Secrets / 환경변수 로드
@@ -14,11 +23,20 @@ st.set_page_config(
     layout="wide",
 )
 
-# API Key 자동 로드
-if not os.getenv("OPENAI_API_KEY"):
+# API Key 자동 로드 및 Agents SDK 기본 키 등록
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
     try:
         if "OPENAI_API_KEY" in st.secrets:
-            os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+            api_key = st.secrets["OPENAI_API_KEY"]
+            os.environ["OPENAI_API_KEY"] = api_key
+    except Exception:
+        pass
+
+if api_key:
+    try:
+        from agents import set_default_openai_key
+        set_default_openai_key(api_key)
     except Exception:
         pass
 
@@ -236,6 +254,13 @@ if user_input:
         st.caption(badge_text)
         with st.spinner("보건교과 지식 및 근거를 확인하고 있습니다..."):
             try:
+                # Windows 환경 및 Streamlit 스레드 간 이벤트 루프 충돌 방지
+                try:
+                    from agents.models import openai_provider
+                    openai_provider._http_client = None
+                except Exception:
+                    pass
+
                 result = Runner.run_sync(
                     coach_agent,
                     user_input,
