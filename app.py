@@ -295,22 +295,6 @@ for message in st.session_state.messages:
             st.caption(message["rag_badge"])
         st.markdown(message["content"])
 
-# 대화 내용이 있으면 메인 화면 하단에도 즉시 다운로드 버튼 제공
-if st.session_state.messages:
-    st.markdown("---")
-    col_dl1, col_dl2 = st.columns([3, 2])
-    with col_dl1:
-        st.success(f"💾 **{download_filename}** 다운로드 준비 완료 (대화 {len(st.session_state.messages)}건)")
-    with col_dl2:
-        st.download_button(
-            label=f"📥 {download_filename} 바로 저장",
-            data=json_data,
-            file_name=download_filename,
-            mime="application/json",
-            key="main_download_btn",
-            use_container_width=True,
-            help="현재 대화 내용을 포함한 JSON 파일을 즉시 내려받습니다."
-        )
 
 # ---------------------------------------------------------
 # 7. 사용자 입력 및 실행
