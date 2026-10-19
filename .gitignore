@@ -1,0 +1,19 @@
+# .gitignore 내용 
+
+# Virtual environment
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Local database
+*.db
+
+# OS
+.DS_Store
