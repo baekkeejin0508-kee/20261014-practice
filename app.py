@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import uuid
 import hashlib
 import asyncio
 from datetime import datetime, timezone
@@ -21,6 +22,19 @@ st.set_page_config(
     page_title="Health Inquiry Coach - RAG 실습",
     page_icon="🩺",
     layout="wide",
+)
+
+# 크롬 웹페이지 번역으로 인한 React DOM removeChild 충돌 방지
+st.markdown(
+    """
+    <meta name="google" content="notranslate">
+    <style>
+        .notranslate {
+            translate: no !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 # API Key 자동 로드 및 Agents SDK 기본 키 등록
@@ -112,21 +126,61 @@ with st.sidebar:
     )
     is_rag_on = "RAG ON" in rag_mode
 
+    # 세션 토큰 초기화
+    if "session_token" not in st.session_state:
+        st.session_state.session_token = uuid.uuid4().hex[:8]
+
+    # 모드 전환 감지 -> 대화 기록 및 세션 독립 분리 (이전 모드 기억 혼입 방지)
+    if "active_rag_mode" not in st.session_state:
+        st.session_state.active_rag_mode = rag_mode
+    elif st.session_state.active_rag_mode != rag_mode:
+        st.session_state.active_rag_mode = rag_mode
+        st.session_state.messages = []
+        st.session_state.session_token = uuid.uuid4().hex[:8]
+        if "agent_session" in st.session_state:
+            del st.session_state["agent_session"]
+        st.rerun()
+
     st.markdown("---")
 
-    # Vector Store 상태
+    # Vector Store 상태 (크롬 번역 React 충돌을 방지하는 정적 HTML 카드)
     st.subheader("📚 Knowledge Base")
     if is_rag_on:
         if vector_store_id:
-            st.success(f"Vector Store 연결됨:\n`{vector_store_id}`")
+            st.markdown(
+                f"""
+                <div style="background-color:rgba(16, 185, 129, 0.15); border:1px solid #10b981; padding:10px; border-radius:6px; margin-bottom:10px;">
+                    <div style="color:#10b981; font-weight:600; font-size:13px;">🟢 Vector Store 연결됨</div>
+                    <div style="font-family:monospace; font-size:11px; color:#9ca3af; word-break:break-all; margin-top:4px;">{vector_store_id}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
         else:
-            st.error("⚠️ VECTOR_STORE_ID가 없습니다.\n터미널에서 `python setup_knowledge.py`를 먼저 실행하세요.")
+            st.markdown(
+                """
+                <div style="background-color:rgba(239, 68, 68, 0.15); border:1px solid #ef4444; padding:10px; border-radius:6px; margin-bottom:10px;">
+                    <div style="color:#ef4444; font-weight:600; font-size:13px;">⚠️ VECTOR_STORE_ID 없음</div>
+                    <div style="font-size:11px; color:#9ca3af; margin-top:4px;">setup_knowledge.py를 실행하세요.</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
     else:
-        st.info("RAG OFF 상태에서는 지식 검색 도구를 사용하지 않습니다.")
+        st.markdown(
+            """
+            <div style="background-color:rgba(148, 163, 184, 0.15); border:1px solid #64748b; padding:10px; border-radius:6px; margin-bottom:10px;">
+                <div style="color:#cbd5e1; font-weight:600; font-size:13px;">⚪ RAG OFF (순수 LLM 모드)</div>
+                <div style="font-size:11px; color:#94a3b8; margin-top:4px;">지식 검색 도구를 사용하지 않고 모델 자체 지식으로만 답변합니다.</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     # 세션 초기화 버튼
     if st.button("🔄 대화 기록 초기화", use_container_width=True):
         st.session_state.messages = []
+        st.session_state.session_token = uuid.uuid4().hex[:8]
         if "agent_session" in st.session_state:
             del st.session_state["agent_session"]
         st.rerun()
@@ -210,17 +264,21 @@ coach_agent = Agent(
 )
 
 # ---------------------------------------------------------
-# 5. 세션 관리
+# 5. 세션 관리 (모드 및 테스트 항목별 완전 격리)
 # ---------------------------------------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-session_key = f"health_session_{'rag_on' if is_rag_on else 'rag_off'}"
-if "agent_session" not in st.session_state:
+if "session_token" not in st.session_state:
+    st.session_state.session_token = uuid.uuid4().hex[:8]
+
+session_key = f"health_{'on' if is_rag_on else 'off'}_{test_id}_{st.session_state.session_token}"
+if "agent_session" not in st.session_state or st.session_state.get("current_session_key") != session_key:
     st.session_state.agent_session = SQLiteSession(
         session_key,
         "health_agent.db",
     )
+    st.session_state.current_session_key = session_key
 
 # ---------------------------------------------------------
 # 6. 메인 화면 구성
