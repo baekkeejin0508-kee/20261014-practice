@@ -17,7 +17,7 @@ from openai import OpenAI
 # ---------------------------------------------------------
 
 KNOWLEDGE_DIR = Path("knowledge")
-VECTOR_STORE_NAME = "Science Inquiry Knowledge"
+VECTOR_STORE_NAME = "Health Inquiry Knowledge"
 SECRETS_FILE = Path(".streamlit/secrets.toml")
 
 
