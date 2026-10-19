@@ -30,6 +30,10 @@ if not vector_store_id:
     except Exception:
         pass
 
+# 세션 상태 초기화 (메시지 목록)
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
 # ---------------------------------------------------------
 # 2. Health Inquiry Coach Instructions 정의
 # ---------------------------------------------------------
@@ -128,12 +132,13 @@ with st.sidebar:
         "instructions_hash": instructions_hash,
         "vector_store_id": vector_store_id if is_rag_on else None,
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "messages": st.session_state.messages,
+        "messages": st.session_state.get("messages", []),
     }
 
     json_data = json.dumps(record_payload, ensure_ascii=False, indent=2)
 
-    has_messages = len(st.session_state.messages) > 0
+    messages_list = st.session_state.get("messages", [])
+    has_messages = len(messages_list) > 0
     st.download_button(
         label=f"📥 {download_filename} 저장",
         data=json_data,
