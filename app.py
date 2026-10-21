@@ -254,6 +254,23 @@ with st.sidebar:
     else:
         st.caption("💡 대화 입력 전에도 빈 템플릿으로 저장 가능합니다.")
 
+    # PDF 종합 보고서 다운로드 버튼
+    pdf_report_path = Path("RAG_ON_OFF_비교검증보고서.pdf")
+    if pdf_report_path.exists():
+        try:
+            with open(pdf_report_path, "rb") as f_pdf:
+                st.download_button(
+                    label="📑 종합 비교 보고서 (PDF) 저장",
+                    data=f_pdf.read(),
+                    file_name="RAG_ON_OFF_비교검증보고서.pdf",
+                    mime="application/pdf",
+                    key="sidebar_pdf_btn",
+                    use_container_width=True,
+                    help="T1~T5 전체 검증 결과 및 환각 억제 분석이 담긴 A4 고품질 PDF 보고서를 내려받습니다."
+                )
+        except Exception:
+            pass
+
     st.markdown("---")
     
     # 6주차 보건 RAG 테스트 가이드 예시
@@ -339,6 +356,30 @@ st.markdown(
 
 status_badge = "🟢 **RAG ON** (FileSearchTool 연결됨)" if is_rag_on else "⚪ **RAG OFF** (순수 LLM 지식만 사용)"
 st.caption(f"동작 모드: {status_badge} · 보건교과 자료를 근거로 학생의 탐구 질문과 모의실습 설계를 돕습니다.")
+
+# 6주차 종합 비교 검증 보고서 전문 열람 및 PDF 다운로드 익스팬더
+report_md_path = Path("RAG_ON_OFF_비교검증보고서.md")
+if report_md_path.exists():
+    with st.expander("📑 6주차 RAG ON vs OFF 종합 비교 검증 보고서 전문 열람 (PDF 다운로드)", expanded=False):
+        c1, c2 = st.columns([3, 1])
+        with c1:
+            st.info("💡 아래 전문을 읽어보시거나 우측 버튼을 통해 A4 고품질 인쇄용 PDF 보고서를 바로 다운로드할 수 있습니다.")
+        with c2:
+            if pdf_report_path.exists():
+                try:
+                    with open(pdf_report_path, "rb") as f_pdf2:
+                        st.download_button(
+                            label="📥 PDF 보고서 받기",
+                            data=f_pdf2.read(),
+                            file_name="RAG_ON_OFF_비교검증보고서.pdf",
+                            mime="application/pdf",
+                            key="main_pdf_download_btn",
+                            use_container_width=True
+                        )
+                except Exception:
+                    pass
+        st.markdown(report_md_path.read_text(encoding="utf-8"))
+        st.markdown("---")
 
 # 대화 기록 표시
 for message in st.session_state.messages:
