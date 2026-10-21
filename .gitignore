@@ -1,23 +1,25 @@
-# Virtual environment
+﻿# Virtual environment
 .venv/
 venv/
 
-# Python
+# Python Cache & Database
 __pycache__/
 *.pyc
 *.pyo
-
-# Streamlit secrets & DB
-.streamlit/secrets.toml
 *.db
 *.db-*
+*.db-shm
+*.db-wal
 
-# HWP documents (OpenAI does not support HWP parsing)
+# Streamlit secrets & Environment variables (API Key 보호)
+.streamlit/secrets.toml
+.env
+
+# RAG 원본 문서 보호 (교과서 PDF, HWP, 크롤링 웹문서의 Git 유출 방지)
+knowledge/
+knowledge_web/
 *.hwp
-
-# Large PDF textbooks for RAG (kept locally in knowledge/, excluded from Git push to avoid 100MB limit)
-knowledge/*.pdf
-!knowledge/README.md
 
 # OS
 .DS_Store
+Thumbs.db
