@@ -5,6 +5,7 @@ import uuid
 import hashlib
 import asyncio
 from datetime import datetime, timezone
+from pathlib import Path
 import streamlit as st
 from agents import Agent, FileSearchTool, Runner, SQLiteSession
 
@@ -112,8 +113,15 @@ HEALTH_INSTRUCTIONS = """
 # 3. 사이드바 설정 (RAG ON vs OFF 비교 실험 모드)
 # ---------------------------------------------------------
 with st.sidebar:
-    st.title("🩺 Health Inquiry Coach")
-    st.caption("특성화고 2학년 보건간호 RAG 지식 에이전트")
+    st.markdown(
+        """
+        <div class="notranslate" translate="no">
+            <h2 style="margin: 0; padding: 0; font-size: 1.55rem; font-weight: 700;">🩺 Health Inquiry Coach</h2>
+            <div style="font-size: 0.82rem; color: #94a3b8; margin-top: 4px; margin-bottom: 12px;">특성화고 2학년 보건간호 RAG 지식 에이전트</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     st.markdown("---")
     
     # RAG On vs OFF 실험 모드 선택 (교재 28페이지 비교 실험)
@@ -311,7 +319,14 @@ if "agent_session" not in st.session_state or st.session_state.get("current_sess
 # ---------------------------------------------------------
 # 6. 메인 화면 구성
 # ---------------------------------------------------------
-st.title("🩺 Health Inquiry Coach")
+st.markdown(
+    """
+    <div class="notranslate" translate="no">
+        <h1 style="margin: 0; padding: 0; font-size: 2.1rem; font-weight: 700;">🩺 Health Inquiry Coach</h1>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 status_badge = "🟢 **RAG ON** (FileSearchTool 연결됨)" if is_rag_on else "⚪ **RAG OFF** (순수 LLM 지식만 사용)"
 st.caption(f"동작 모드: {status_badge} · 보건교과 자료를 근거로 학생의 탐구 질문과 모의실습 설계를 돕습니다.")
