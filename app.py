@@ -138,11 +138,21 @@ with st.sidebar:
     )
     rag_mode = st.radio(
         "RAG 동작 모드",
-        ["🟢 RAG ON (Knowledge 검색)", "⚪ RAG OFF (순수 LLM)"],
+        [
+            "🌐 웹 URL RAG (공공 웹사이트)",
+            "📚 교과서 PDF RAG (17종 교과서)",
+            "⚪ RAG OFF (순수 LLM)"
+        ],
         index=0,
-        help="동일한 질문을 두 조건에 입력하고 답변의 근거성, 자료일치, 과도한 추론 등을 비교합니다."
+        help="지식 소스(웹페이지 URL vs 기존 교과서 PDF)를 전환하거나 순수 LLM 모드로 테스트합니다."
     )
-    is_rag_on = "RAG ON" in rag_mode
+    is_url_rag = "웹 URL" in rag_mode
+    is_file_rag = "교과서 PDF" in rag_mode
+    is_rag_on = is_url_rag or is_file_rag
+
+    url_store_id = st.secrets.get("VECTOR_STORE_URL_ID", vector_store_id)
+    file_store_id = st.secrets.get("VECTOR_STORE_FILE_ID", vector_store_id)
+    active_vector_store_id = url_store_id if is_url_rag else (file_store_id if is_file_rag else None)
 
     # 세션 토큰 초기화
     if "session_token" not in st.session_state:
@@ -305,10 +315,10 @@ with st.sidebar:
 # 4. Agent 생성 (RAG ON vs OFF 동적 적용)
 # ---------------------------------------------------------
 tools = []
-if is_rag_on and vector_store_id:
+if is_rag_on and active_vector_store_id:
     tools = [
         FileSearchTool(
-            vector_store_ids=[vector_store_id],
+            vector_store_ids=[active_vector_store_id],
             max_num_results=3,
         )
     ]
@@ -348,7 +358,12 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-status_badge = "🟢 <b>RAG ON</b> (FileSearchTool 연결됨)" if is_rag_on else "⚪ <b>RAG OFF</b> (순수 LLM 지식만 사용)"
+if is_url_rag:
+    status_badge = "🌐 <b>웹 URL RAG</b> (공공 웹사이트 Knowledge 연결됨)"
+elif is_file_rag:
+    status_badge = "📚 <b>교과서 PDF RAG</b> (17종 보건교과서 Knowledge 연결됨)"
+else:
+    status_badge = "⚪ <b>RAG OFF</b> (순수 LLM 지식만 사용)"
 st.markdown(
     f'<div class="notranslate" translate="no" style="font-size:0.88rem; color:#94a3b8; margin-bottom:12px;">동작 모드: {status_badge} · 보건교과 자료를 근거로 학생의 탐구 질문과 모의실습 설계를 돕습니다.</div>',
     unsafe_allow_html=True
