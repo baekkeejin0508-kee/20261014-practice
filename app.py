@@ -20,7 +20,7 @@ if sys.platform == "win32":
 # 1. 기본 설정 및 Secrets / 환경변수 로드
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Health Inquiry Coach - RAG 실습",
+    page_title="Health Coach Inquiry",
     page_icon="🩺",
     layout="wide",
 )
@@ -116,7 +116,7 @@ with st.sidebar:
     st.markdown(
         """
         <div class="notranslate" translate="no">
-            <h2 style="margin: 0; padding: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap;">🩺 Health Inquiry Coach</h2>
+            <h2 style="margin: 0; padding: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap;">🩺 Health Coach Inquiry</h2>
             <div style="font-size: 0.82rem; color: #94a3b8; margin-top: 4px; margin-bottom: 12px;">특성화고 2학년 보건간호 RAG 지식 에이전트</div>
         </div>
         """,
@@ -320,7 +320,7 @@ if is_rag_on and vector_store_id:
     ]
 
 coach_agent = Agent(
-    name="Health Inquiry Coach",
+    name="Health Coach Inquiry",
     instructions=HEALTH_INSTRUCTIONS,
     tools=tools,
 )
@@ -348,7 +348,7 @@ if "agent_session" not in st.session_state or st.session_state.get("current_sess
 st.markdown(
     """
     <div class="notranslate" translate="no">
-        <h1 style="margin: 0; padding: 0; font-size: 2.1rem; font-weight: 700;">🩺 Health Inquiry Coach</h1>
+        <h1 style="margin: 0; padding: 0; font-size: 2.1rem; font-weight: 700;">🩺 Health Coach Inquiry</h1>
     </div>
     """,
     unsafe_allow_html=True
