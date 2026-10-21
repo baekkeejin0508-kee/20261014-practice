@@ -1,3 +1,5 @@
 openai-agents
 openai
 streamlit
+requests
+beautifulsoup4
