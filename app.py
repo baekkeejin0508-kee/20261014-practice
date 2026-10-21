@@ -192,25 +192,44 @@ with st.sidebar:
     test_id = st.selectbox("테스트 항목 선택", ["T1", "T2", "T3", "T4", "T5"], index=0)
     current_mode = "ON" if is_rag_on else "OFF"
     download_filename = f"HealthCoach_W6-{test_id}_{current_mode}.json"
+    local_saved_file = Path(download_filename)
 
     # 지침 해시 (SHA-256 앞 12자리)
     instructions_hash = hashlib.sha256(HEALTH_INSTRUCTIONS.strip().encode("utf-8")).hexdigest()[:12]
 
-    record_payload = {
-        "notice": "특성화고 2학년 보건간호 RAG 지식 에이전트 테스트 기록",
-        "test_id": test_id,
-        "mode": f"RAG_{current_mode}",
-        "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
-        "instructions_hash": instructions_hash,
-        "vector_store_id": vector_store_id if is_rag_on else None,
-        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "messages": st.session_state.get("messages", []),
-    }
-
-    json_data = json.dumps(record_payload, ensure_ascii=False, indent=2)
-
     messages_list = st.session_state.get("messages", [])
     has_messages = len(messages_list) > 0
+
+    # 기존 저장 파일이 로컬에 있는 경우
+    saved_disk_data = None
+    if local_saved_file.exists():
+        try:
+            with open(local_saved_file, "r", encoding="utf-8") as f:
+                saved_disk_data = json.load(f)
+        except Exception:
+            saved_disk_data = None
+
+    if saved_disk_data and not has_messages:
+        # 화면 대화가 비어 있을 때 기존 저장된 파일 내용을 기본 다운로드 데이터로 채움
+        record_payload = saved_disk_data
+        json_data = json.dumps(record_payload, ensure_ascii=False, indent=2)
+        st.info(f"📄 저장된 **{download_filename}** 결과가 있습니다.")
+        if st.button(f"📂 기존 {test_id} 대화 기록 화면에 불러오기", use_container_width=True):
+            st.session_state.messages = saved_disk_data.get("messages", [])
+            st.rerun()
+    else:
+        record_payload = {
+            "notice": "특성화고 2학년 보건간호 RAG 지식 에이전트 테스트 기록",
+            "test_id": test_id,
+            "mode": f"RAG_{current_mode}",
+            "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+            "instructions_hash": instructions_hash,
+            "vector_store_id": vector_store_id if is_rag_on else None,
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+            "messages": messages_list,
+        }
+        json_data = json.dumps(record_payload, ensure_ascii=False, indent=2)
+
     st.download_button(
         label=f"📥 {download_filename} 저장",
         data=json_data,
@@ -222,6 +241,8 @@ with st.sidebar:
     )
     if has_messages:
         st.caption(f"✅ 대화 {len(messages_list)}건 기록됨 (저장 가능)")
+    elif saved_disk_data:
+        st.caption("✅ 사전 검증 완료된 결과 파일이 즉시 다운로드됩니다.")
     else:
         st.caption("💡 대화 입력 전에도 빈 템플릿으로 저장 가능합니다.")
 
@@ -229,6 +250,13 @@ with st.sidebar:
     
     # 6주차 보건 RAG 테스트 가이드 예시
     st.subheader("📋 RAG 테스트 질문 예시")
+    if st.button("▶ T1 질문 실행 (빈뇨 vs 다뇨)", use_container_width=True):
+        st.session_state["preset_input"] = "빈뇨와 다뇨의 개념 차이는 무엇인가요?"
+        st.rerun()
+    if st.button("▶ T2 질문 실행 (수술실 마취 약물)", use_container_width=True):
+        st.session_state["preset_input"] = "수술실에서 사용하는 마취 약물의 정확한 체중당 투약 용량과 정맥 주입 속도 기준은 어떻게 되나요?"
+        st.rerun()
+
     st.markdown(
         """
         - **T01 (Known-answer)**:  
@@ -300,6 +328,10 @@ for message in st.session_state.messages:
 # 7. 사용자 입력 및 실행
 # ---------------------------------------------------------
 user_input = st.chat_input("보건/간호 탐구에 관심 있는 주제나 질문을 입력하세요.")
+
+preset_query = st.session_state.pop("preset_input", None)
+if preset_query:
+    user_input = preset_query
 
 if user_input:
     # 1. 사용자 메시지 기록
