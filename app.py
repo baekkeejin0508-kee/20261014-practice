@@ -127,8 +127,15 @@ with st.sidebar:
     )
     st.markdown("---")
     
-    # RAG On vs OFF 실험 모드 선택 (교재 28페이지 비교 실험)
-    st.subheader("🧪 비교 실험 모드 (RAG On vs OFF)")
+    st.markdown(
+        """
+        <div class="notranslate" translate="no">
+            <h3 style="margin-top: 15px; margin-bottom: 2px; font-size: 1.15rem; font-weight: 600;">🧪 비교 실험 모드</h3>
+            <div style="font-size: 0.88rem; color: #94a3b8; margin-bottom: 12px; font-weight: 500;">(RAG ON vs OFF)</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     rag_mode = st.radio(
         "RAG 동작 모드",
         ["🟢 RAG ON (Knowledge 검색)", "⚪ RAG OFF (순수 LLM)"],
